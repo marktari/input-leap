@@ -1,0 +1,3 @@
+#pragma once
+
+#include "arch/atari/thread_compat.h"

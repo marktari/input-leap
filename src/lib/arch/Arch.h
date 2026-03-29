@@ -45,6 +45,13 @@
 #    include "arch/win32/ArchNetworkWinsock.h"
 #    include "arch/win32/ArchSystemWindows.h"
 #    include "arch/win32/ArchTaskBarWindows.h"
+#elif WINAPI_ATARI
+#    include "arch/atari/ArchDaemonAtari.h"
+#    include "arch/atari/ArchMultithreadAtari.h"
+#    include "arch/atari/ArchLogAtari.h"
+#    include "arch/atari/ArchSystemAtari.h"
+#    include "arch/atari/ArchTaskBarAtari.h"
+#    include "arch/atari/ArchNetworkAtari.h"
 #elif SYSAPI_UNIX
 #    include "arch/unix/ArchDaemonUnix.h"
 #    include "arch/unix/ArchLogUnix.h"

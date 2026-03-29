@@ -50,6 +50,9 @@ SocketMultiplexer::SocketMultiplexer() :
     m_update(false),
     m_jobListLocker(nullptr),
     m_jobListLockLocker(nullptr)
+#ifdef WINAPI_ATARI
+    , m_adaptiveTimeout(0.001) // Start with 1ms for low latency
+#endif
 {
     // start thread
     m_thread = new Thread([this](){ service_thread(); });
@@ -180,7 +183,12 @@ void SocketMultiplexer::service_thread()
         try {
             // check for status
             if (!pfds.empty()) {
+#ifdef WINAPI_ATARI
+                // Use adaptive timeout for low-latency cooperative threading on Atari
+                poll_status = ARCH->pollSocket(&pfds[0], static_cast<int>(pfds.size()), m_adaptiveTimeout);
+#else
                 poll_status = ARCH->pollSocket(&pfds[0], static_cast<int>(pfds.size()), -1);
+#endif
             }
             else {
                 poll_status = 0;
@@ -190,6 +198,17 @@ void SocketMultiplexer::service_thread()
             LOG_WARN("error in socket multiplexer: %s", e.what());
             poll_status = 0;
         }
+
+#ifdef WINAPI_ATARI
+        // Adaptive timeout logic for Atari performance
+        if (poll_status > 0) {
+            // Activity detected - reduce timeout for responsiveness
+            m_adaptiveTimeout = std::max(0.001, m_adaptiveTimeout * 0.5);
+        } else {
+            // No activity - gradually increase timeout to reduce CPU usage
+            m_adaptiveTimeout = std::min(0.02, m_adaptiveTimeout * 1.1);
+        }
+#endif
 
         if (poll_status != 0) {
             // iterate over socket jobs, invoking each and saving the

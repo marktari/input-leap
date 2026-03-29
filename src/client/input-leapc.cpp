@@ -27,7 +27,7 @@
 
 namespace inputleap {
 
-#if WINAPI_XWINDOWS || WINAPI_LIBEI || WINAPI_CARBON
+#if WINAPI_XWINDOWS || WINAPI_LIBEI || WINAPI_CARBON || WINAPI_ATARI
 CreateTaskBarReceiverFunc createTaskBarReceiver = nullptr;
 #endif
 

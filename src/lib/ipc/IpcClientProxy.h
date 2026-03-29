@@ -25,6 +25,7 @@
 #include "base/EventTarget.h"
 #include "base/Fwd.h"
 
+#include <memory>
 #include <mutex>
 
 namespace inputleap {

@@ -42,7 +42,11 @@ namespace inputleap {
 #define MAX_ERROR_SIZE 65535
 
 static const std::size_t MAX_INPUT_BUFFER_SIZE = 1024 * 1024;
+#ifdef WINAPI_ATARI
+static const float s_retryDelay = 0.1f;  // Slower retry for Atari systems
+#else
 static const float s_retryDelay = 0.01f;
+#endif
 
 enum {
     kMsgSize = 128

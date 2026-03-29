@@ -21,6 +21,7 @@
 
 #include <climits>
 #include <cstring>
+#include <cwchar>
 
 namespace {
 
@@ -250,7 +251,7 @@ static std::string convert_wide_to_current_mb(const wchar_t* src, std::uint32_t 
 
     char tmp_chars[MB_LEN_MAX];
     for (const wchar_t* scan = src; n > 0; ++scan, --n) {
-        std::size_t mblen = std::wcrtomb(tmp_chars, *scan, &state);
+        std::size_t mblen = ::wcrtomb(tmp_chars, *scan, &state);
         if (mblen == static_cast<std::size_t>(-1)) {
             errors = true;
             result.push_back('?');
@@ -260,7 +261,7 @@ static std::string convert_wide_to_current_mb(const wchar_t* src, std::uint32_t 
             }
         }
     }
-    std::size_t mblen = std::wcrtomb(tmp_chars, L'\0', &state);
+    std::size_t mblen = ::wcrtomb(tmp_chars, L'\0', &state);
     if (mblen != static_cast<std::size_t>(-1)) {
         // don't include nul terminator
         for (std::size_t i = 0; i < mblen - 1; ++i) {
@@ -336,14 +337,15 @@ Unicode::UTF32ToUTF8(const std::string& src, bool* errors)
     return doUTF32ToUTF8(reinterpret_cast<const std::uint8_t*>(src.data()), n, errors);
 }
 
-static std::wstring convert_current_mb_to_wide(const char* src, std::size_t n, bool& errors)
+static std::basic_string<wchar_t> convert_current_mb_to_wide(const char* src, std::size_t n,
+                                                             bool& errors)
 {
     std::mbstate_t state = { };
-    std::wstring result;
+    std::basic_string<wchar_t> result;
 
     while (n > 0) {
         wchar_t tmp_char = {};
-        std::size_t mblen = std::mbrtowc(&tmp_char, src, n, &state);
+        std::size_t mblen = ::mbrtowc(&tmp_char, src, n, &state);
         switch (mblen) {
         case static_cast<std::size_t>(-2):
             // incomplete character.  convert to unknown character.

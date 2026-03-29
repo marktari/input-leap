@@ -20,7 +20,9 @@
 #include <cstdio>
 #include <iosfwd>
 #include <ios>
-#if INPUTLEAP_USE_GULRAK_FILESYSTEM
+#if WINAPI_ATARI
+#include "filesystem_atari.h"
+#elif INPUTLEAP_USE_GULRAK_FILESYSTEM
 #include <ghc/fs_fwd.hpp>
 #else
 #include <filesystem>
@@ -28,7 +30,9 @@
 
 namespace inputleap {
 
-#if INPUTLEAP_USE_GULRAK_FILESYSTEM
+#if WINAPI_ATARI
+namespace fs = atari_fs;
+#elif INPUTLEAP_USE_GULRAK_FILESYSTEM
 namespace fs = ghc::filesystem;
 #else
 namespace fs = std::filesystem;

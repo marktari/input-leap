@@ -113,6 +113,10 @@ private:
 
     SocketJobs m_socketJobs;
     SocketJobMap m_socketJobMap;
+
+#ifdef WINAPI_ATARI
+    double m_adaptiveTimeout; // Adaptive timeout for Atari performance
+#endif
 };
 
 } // namespace inputleap

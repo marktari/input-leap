@@ -58,6 +58,9 @@
 #if WINAPI_CARBON
 #include "platform/OSXScreen.h"
 #endif
+#if WINAPI_ATARI
+#include "platform/AtariScreen.h"
+#endif
 
 #if defined(__APPLE__)
 #include "platform/OSXDragSimulator.h"
@@ -906,6 +909,9 @@ std::unique_ptr<IPlatformScreen> ServerApp::create_platform_screen()
 #endif
 #if WINAPI_CARBON
     return std::make_unique<OSXScreen>(m_events, true);
+#endif
+#if WINAPI_ATARI
+    return std::make_unique<AtariScreen>(true, m_events);
 #endif
     throw std::runtime_error("Failed to create screen, this shouldn't happen");
 }

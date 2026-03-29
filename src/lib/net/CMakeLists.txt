@@ -17,6 +17,14 @@
 file(GLOB headers "*.h")
 file(GLOB sources "*.cpp")
 
+#if (BUILD_ATARI)
+#    list(REMOVE_ITEM sources
+#        "${CMAKE_CURRENT_SOURCE_DIR}/SecureListenSocket.cpp"
+#        "${CMAKE_CURRENT_SOURCE_DIR}/SecureSocket.cpp"
+#        "${CMAKE_CURRENT_SOURCE_DIR}/SecureUtils.cpp"
+#    )
+#endif()
+
 if(INPUTLEAP_ADD_HEADERS)
     list(APPEND sources ${headers})
 endif()

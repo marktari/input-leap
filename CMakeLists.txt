@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 cmake_minimum_required(VERSION 3.21)
-project(InputLeap C CXX)
+project(InputLeap C CXX ASM)
 
 option(INPUTLEAP_BUILD_GUI "Build the GUI" ON)
 option(INPUTLEAP_BUILD_TESTS "Build the tests" ON)
@@ -41,7 +41,7 @@ endif()
 if(QT_DEFAULT_MAJOR_VERSION EQUAL 6)
     set(CMAKE_CXX_STANDARD 17)
 else()
-    set(CMAKE_CXX_STANDARD 14)
+    set(CMAKE_CXX_STANDARD 17)
 endif()
 
 include (cmake/Version.cmake)
@@ -89,8 +89,13 @@ if (INPUTLEAP_BUILD_GUI)
 endif()
 add_definitions(-DINPUTLEAP_USE_GULRAK_FILESYSTEM=$<BOOL:${INPUTLEAP_BUILD_GULRAK_FILESYSTEM}>)
 if (UNIX)
-    if (NOT APPLE)
+    if (NOT APPLE AND NOT CMAKE_C_COMPILER MATCHES "m68k-atari-mint")
         set (CMAKE_POSITION_INDEPENDENT_CODE TRUE)
+    endif()
+
+    if (CMAKE_C_COMPILER MATCHES "m68k-atari-mint")
+        set(CMAKE_CXX_STANDARD 14)
+        include_directories(BEFORE "${CMAKE_SOURCE_DIR}/src/lib/arch/atari/stdcxx")
     endif()
 
     # For config.h, detect the libraries, functions, etc.
@@ -108,11 +113,13 @@ if (UNIX)
 
     check_function_exists (getpwuid_r HAVE_GETPWUID_R)
 
-    # pthread is used on both Linux and Mac
+    # pthread is used on both Linux and Mac, FreeMiNT has minimal threading
     set (CMAKE_THREAD_PREFER_PTHREAD TRUE)
     set (THREADS_PREFER_PTHREAD_FLAG TRUE)
-    find_package (Threads REQUIRED)
-    list (APPEND libs Threads::Threads)
+    if (NOT CMAKE_C_COMPILER MATCHES "m68k-atari-mint")
+        find_package (Threads REQUIRED)
+        list (APPEND libs Threads::Threads)
+    endif()
 
     if (APPLE)
         set (CMAKE_CXX_FLAGS "--sysroot ${CMAKE_OSX_SYSROOT} ${CMAKE_CXX_FLAGS} -DGTEST_USE_OWN_TR1_TUPLE=1")
@@ -213,6 +220,12 @@ if (UNIX)
     if (APPLE)
         add_definitions (-DWINAPI_CARBON=1 -D_THREAD_SAFE)
         set (BUILD_CARBON 1)
+    elseif (CMAKE_C_COMPILER MATCHES "m68k-atari-mint")
+        # Atari FreeMiNT
+        add_definitions(-DWINAPI_ATARI=1 -D_PTH_PRIVATE)
+        set (BUILD_ATARI 1)
+        list (APPEND libs gem pth)
+        message(STATUS "Building for Atari FreeMiNT (m68k-atari-mint)")
     else()
         if(INPUTLEAP_BUILD_X11)
             add_definitions (-DWINAPI_XWINDOWS=1)
@@ -255,7 +268,23 @@ include_directories(SYSTEM "${CMAKE_SOURCE_DIR}/ext/gulrak-filesystem/include")
 if (APPLE OR WIN32)
     set(OPENSSL_USE_STATIC_LIBS TRUE)
 endif()
-find_package(OpenSSL 1.1.1 REQUIRED COMPONENTS SSL Crypto)
+
+if (CMAKE_C_COMPILER MATCHES "m68k-atari-mint")
+    # Enable OpenSSL for Atari builds
+    set(OPENSSL_ROOT_DIR "/usr/m68k-atari-mint/sys-root/usr")
+    set(OPENSSL_INCLUDE_DIR "/usr/m68k-atari-mint/sys-root/usr/include")
+    set(OPENSSL_SSL_LIBRARY "/usr/m68k-atari-mint/sys-root/usr/lib/libssl.a")
+    set(OPENSSL_CRYPTO_LIBRARY "/usr/m68k-atari-mint/sys-root/usr/lib/libcrypto.a")
+    find_package(OpenSSL 1.1.1 REQUIRED COMPONENTS SSL Crypto)
+
+    # Add zlib dependency for OpenSSL on Atari
+    find_library(ZLIB_LIBRARY NAMES z PATHS "/usr/m68k-atari-mint/sys-root/usr/lib" NO_DEFAULT_PATH)
+    if(ZLIB_LIBRARY)
+        target_link_libraries(OpenSSL::Crypto INTERFACE ${ZLIB_LIBRARY})
+    endif()
+else()
+    find_package(OpenSSL 1.1.1 REQUIRED COMPONENTS SSL Crypto)
+endif()
 #
 # Configure_file... but for directories, recursively.
 #

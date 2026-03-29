@@ -15,6 +15,9 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifdef WINAPI_ATARI
+#include <pth.h>
+#endif
 #include "Time.h"
 #include "arch/Arch.h"
 #include <chrono>
@@ -29,8 +32,19 @@ void this_thread_sleep(double timeout_seconds)
         return;
     }
 
+#ifdef WINAPI_ATARI
+    // On Atari, use pth_usleep for cooperative threading with microsecond precision
+    if (timeout_seconds > 0.0) {
+        unsigned int microseconds = static_cast<unsigned int>(timeout_seconds * 1000000);
+        pth_usleep(microseconds);
+    } else {
+        // Just yield to other threads
+        pth_yield(nullptr);
+    }
+#else
     auto milliseconds = static_cast<std::uint64_t>(timeout_seconds * 1000);
     std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
+#endif
 }
 
 double current_time_seconds()

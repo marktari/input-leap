@@ -25,7 +25,7 @@
 
 #include <stdarg.h>
 #include <list>
-#include <mutex>
+#include "arch/atari/thread_compat.h"
 
 #define CLOG (Log::getInstance())
 #define BYE "\nTry `%s --help' for more information."
