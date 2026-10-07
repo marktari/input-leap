@@ -60,6 +60,7 @@ AtariScreen::AtariScreen(bool isPrimary, IEventQueue* events) :
     m_width(640), m_height(480),
     m_mouseX(0), m_mouseY(0),
     m_mouseButtons(0),
+    m_y_accumulatedScroll(0),
     m_hasMiNT(false),
     m_hasIKBD(false),
     m_fakeInput(true),
@@ -453,9 +454,32 @@ void AtariScreen::fakeMouseRelativeMove(std::int32_t dx, std::int32_t dy) const
 
 void AtariScreen::fakeMouseWheel(std::int32_t xDelta, std::int32_t yDelta) const
 {
-    // Mouse wheel not supported on Atari IKBD
-    (void)xDelta;
-    (void)yDelta;
+    // Emulate the mouse wheel as F16 (up) / F17 (down) key taps.
+    if (!m_fakeInput) {
+        return;
+    }
+    if (yDelta == 0) {
+        return; // only vertical wheel is supported on Atari
+    }
+
+    // Accumulate fine-grained deltas into whole wheel ticks.
+    constexpr std::int32_t kScrollTick = 120;
+    m_y_accumulatedScroll += yDelta;
+    int numTicks = m_y_accumulatedScroll / kScrollTick;
+    m_y_accumulatedScroll -= numTicks * kScrollTick;
+    if (numTicks == 0) {
+        return;
+    }
+
+    // positive delta = up (F16 $59), negative = down (F17 $5A)
+    const std::uint8_t keycode = (numTicks > 0) ? 0x59 : 0x5A;
+
+    AtariScreen* self = const_cast<AtariScreen*>(this);
+    int count = numTicks > 0 ? numTicks : -numTicks;
+    for (int i = 0; i < count; i++) {
+        self->sendKeycode(keycode, true);
+        self->sendKeycode(keycode, false);
+    }
 }
 
 // IPlatformScreen overrides

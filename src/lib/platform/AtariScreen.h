@@ -120,6 +120,7 @@ private:
     // Mouse state
     std::int32_t m_mouseX, m_mouseY;
     std::uint8_t m_mouseButtons;
+    mutable std::int32_t m_y_accumulatedScroll;
 
     // System checks
     bool m_hasMiNT;
