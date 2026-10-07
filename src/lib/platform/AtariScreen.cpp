@@ -30,6 +30,7 @@
 #include <gem.h>
 
 #include <algorithm>
+#include <cstdio>
 
 extern "C" {
     extern void call_mousevec(unsigned char *data, void (**mousevec)(void *));
@@ -42,6 +43,9 @@ void (**mousevec)(void *) = NULL;
 _IOREC *iorec = NULL;
 void (**ikbdvec)() = NULL;
 unsigned char **keytbl;
+#ifdef COLDFIRE
+void *linea000 = NULL;
+#endif
 
 
 namespace inputleap {
@@ -110,7 +114,13 @@ void AtariScreen::init()
 	ikbdvec = (void (**)())&kbdvecs2[-1]; /* undocumented */
 	iorec = (_IOREC *)Iorec(1);
 	keytbl = (unsigned char **)Keytbl(-1, -1, -1);
-
+#ifdef COLDFIRE
+	{
+		long val;
+		if (Getcookie('A000', &val) == C_FOUND && val)
+			linea000 = (void *)val;
+	}
+#endif
 }
 
 void AtariScreen::deinit()

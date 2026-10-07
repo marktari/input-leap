@@ -1,6 +1,9 @@
-.global _mousexy,_call_mousevec,_call_ikbdvec,_asm_set_ipl
+.global _mousexy,_call_ikbdvec,_call_mousevec
+.global _asm_set_ipl
+#ifdef COLDFIRE
+	.global _linea000
+#endif
 	.text
-
 
 _mousexy:
 
@@ -27,37 +30,60 @@ _mousexy:
 	rts
 
 _call_mousevec:
+
+#ifdef COLDFIRE
+	lea -24(SP),SP
+	movem.l D0-D2/A0-A2,(SP)
+#else
 	movem.l D0-D2/A0-A2,-(SP)
-	move.l 28(SP),A0
+#endif
+	move.l 28(SP),A0         // data
 	move.l 32(SP),A2
-	move.l (A2),A2
+	move.l (A2),A2           // mousevec
 	jsr (A2)
+#ifdef COLDFIRE
+	movem.l (SP),D0-D2/A0-A2
+	lea 24(SP),SP
+#else
 	movem.l (SP)+,D0-D2/A0-A2
+#endif
 	rts
 
 _call_ikbdvec:
+
+#ifdef COLDFIRE
+	lea -24(SP),SP
+	movem.l D0-D2/A0-A2,(SP)
+#else
 	movem.l D0-D2/A0-A2,-(SP)
-	move.l 28(SP),D0
+#endif
+	move.l 28(SP),D0         // ikbd code
 	and.l #0xFF,D0
-	move.l 32(SP),A0
-	move.l 36(SP),A2
-	move.l (A2),A2
+	move.l 32(SP),A0         // iorec
+	move.l 36(SP),A2         // &kbdvecs[-1]
+	move.l (A2),A2           // ikbdvec
 	jsr (A2)
+#ifdef COLDFIRE
+	movem.l (SP),D0-D2/A0-A2
+	lea 24(SP),SP
+#else
 	movem.l (SP)+,D0-D2/A0-A2
+#endif
 	rts
 
 _asm_set_ipl:
+
 	link A6,#-8
 	movem.l D6-D7,(SP)
-	move.w SR,D7
-	move.l D7,D0
-	and.l #0x0700,D0
-	lsr.l #8,D0
-	move.l 8(A6),D6
-	and.l #7,D6
-	lsl.l #8,D6
-	and.l #0x0000F8FF,D7
-	or.l D6,D7
+	move.w SR,D7             // current SR
+	move.l D7,D0             // prepare return value
+	and.l #0x0700,D0         // mask out IPL
+	lsr.l #8,D0              // IPL
+	move.l 8(A6),D6          // get argument
+	and.l #7,D6              // least significant three bits
+	lsl.l #8,D6              // move over to make mask
+	and.l #0x0000F8FF,D7     // zero out current IPL
+	or.l D6,D7               // place new IPL in SR
 	move.w D7,SR
 	movem.l (SP),D6-D7
 	lea 8(SP),SP
