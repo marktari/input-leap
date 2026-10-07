@@ -118,15 +118,20 @@ enum class cv_status {
 // Use pth condition variables
 class condition_variable {
 public:
-    condition_variable() {
+    condition_variable() : m_notified(false)
+    {
         pth_cond_init(&m_cond);
     }
 
-    void notify_one() {
+    void notify_one()
+    {
+        m_notified = true;
         pth_cond_notify(&m_cond, FALSE);
     }
 
-    void notify_all() {
+    void notify_all()
+    {
+        m_notified = true;
         pth_cond_notify(&m_cond, TRUE);
     }
 
@@ -149,18 +154,49 @@ public:
     template<class Rep, class Period>
     cv_status wait_for(unique_lock<mutex>& lock, const chrono::duration<Rep, Period>& rel_time)
     {
+        const auto totalMicros =
+            chrono::duration_cast<chrono::microseconds>(rel_time).count();
+
+        // The lock is held on entry. Clear the notification flag while still
+        // holding it so a notify issued after this point is not lost, then
+        // release the lock while we wait.
+        m_notified = false;
         lock.unlock();
 
-        const auto microseconds = chrono::duration_cast<chrono::microseconds>(rel_time).count();
-        if (microseconds > 0) {
-            // Use pth_usleep for microsecond precision
-            pth_usleep(static_cast<unsigned int>(microseconds));
-        } else {
+        if (totalMicros <= 0) {
             pth_yield(nullptr);
+            lock.lock();
+            if (m_notified) {
+                m_notified = false;
+                return cv_status::no_timeout;
+            }
+            return cv_status::timeout;
         }
 
-        lock.lock();
-        return cv_status::timeout;
+        const auto start = chrono::steady_clock::now();
+
+        for (;;) {
+            const auto elapsed = chrono::duration_cast<chrono::microseconds>(
+                                     chrono::steady_clock::now() - start).count();
+            const auto remaining = totalMicros - elapsed;
+
+            if (remaining <= 0) {
+                lock.lock();
+                return cv_status::timeout;
+            }
+
+            // Sleep for a short slice so a posted event wakes us promptly
+            // instead of sleeping for the entire (clamped) timeout.
+            const auto slice = remaining < kWaitSliceMicros ? remaining : kWaitSliceMicros;
+            pth_usleep(static_cast<unsigned int>(slice));
+
+            lock.lock();
+            if (m_notified) {
+                m_notified = false;
+                return cv_status::no_timeout;
+            }
+            lock.unlock();
+        }
     }
 
     template<class Rep, class Period, class Predicate>
@@ -186,7 +222,12 @@ public:
     }
 
 private:
+    // Max time to sleep between notification checks. Kept short so a posted
+    // event (e.g. mouse motion) wakes the waiting thread promptly instead of
+    // sleeping for the full (clamped) timeout.
+    static const long long kWaitSliceMicros = 2000;
     pth_cond_t m_cond;
+    bool m_notified;
 };
 
 namespace this_thread {

@@ -51,7 +51,7 @@ SocketMultiplexer::SocketMultiplexer() :
     m_jobListLocker(nullptr),
     m_jobListLockLocker(nullptr)
 #ifdef WINAPI_ATARI
-    , m_adaptiveTimeout(0.001) // Start with 1ms for low latency
+    , m_adaptiveTimeout(0.002) // Start with 1ms for low latency
 #endif
 {
     // start thread
